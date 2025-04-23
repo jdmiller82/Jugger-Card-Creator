@@ -1,0 +1,281 @@
+/*
+Main features included:
+- Vue 3 app with Tailwind CSS
+- Fabric.js canvas rendering with structured layout
+- Inputs for name, description, rarity, weapon, main image, team logo, card color
+- Preview includes rarity gem, NJA logo, and weapon icon placeholders
+- PNG export functionality
+*/
+
+<script setup>
+import { ref, onMounted } from 'vue'
+import { fabric } from 'fabric'
+
+const cardName = ref('')
+const description = ref('')
+const rarity = ref('Common')
+const weapon = ref('Q-Tip')
+const cardColor = ref('Blue')
+const imageFile = ref(null)
+const logoFile = ref(null)
+const canvasRef = ref(null)
+let canvas
+let uploadedImage = null
+let uploadedLogo = null
+let backgroundImage = null
+
+const rarities = ['Common', 'Rare', 'Epic', 'Legendary']
+const weapons = ['Q-Tip', 'Staff', 'Longsword', 'Dual Short Swords', 'Sword & Shield', 'Chain']
+const cardColors = ['Blue', 'Green', 'Yellow', 'Red']
+
+onMounted(() => {
+  canvas = new fabric.Canvas(canvasRef.value, {
+    width: 500,
+    height: 750,
+    backgroundColor: '#e6f0ff',
+    selection: false
+  })
+  canvas.on('object:moving', (e) => e.preventDefault())
+  updateCard()
+})
+
+function updateCard() {
+  if (!canvas) return
+  const backgroundPath = `/assets/backgrounds/${cardColor.value.toLowerCase()}.png`
+  fabric.Image.fromURL(backgroundPath, (bgImg) => {
+    backgroundImage = bgImg
+    drawCard()
+  }, { crossOrigin: 'anonymous' })
+}
+
+function drawCard() {
+  canvas.clear()
+
+  const padding = 12
+  const cardWidth = 500
+  const cardHeight = 750
+  const innerWidth = cardWidth - padding * 2
+
+  const makeUnselectable = (obj) => {
+    obj.selectable = false
+    obj.evented = false
+    return obj
+  }
+
+  if (backgroundImage) {
+    backgroundImage.set({
+      left: 0,
+      top: 0,
+      width: 500,
+      height: 750,
+      selectable: false,
+      evented: false
+    })
+    canvas.add(backgroundImage)
+    canvas.sendToBack(backgroundImage)
+  }
+
+  const titleBar = makeUnselectable(new fabric.Rect({
+    left: padding,
+    top: padding,
+    width: innerWidth,
+    height: 50,
+    rx: 8,
+    fill: '#2155CD'
+  }))
+  const titleText = makeUnselectable(new fabric.Textbox(cardName.value, {
+    left: padding + 8,
+    top: padding + 12,
+    fontSize: 20,
+    fontWeight: 'bold',
+    fill: 'white',
+    width: innerWidth - 16
+  }))
+  canvas.add(titleBar, titleText)
+
+  if (uploadedImage) {
+    uploadedImage.set({
+      left: padding,
+      top: padding + 62,
+      width: innerWidth,
+      height: innerWidth,
+      selectable: false,
+      evented: false
+    })
+    canvas.add(uploadedImage)
+  } else {
+    const imageBox = makeUnselectable(new fabric.Rect({
+      left: padding,
+      top: padding + 62,
+      width: innerWidth,
+      height: innerWidth,
+      fill: '#ddd'
+    }))
+    canvas.add(imageBox)
+  }
+
+  const descText = makeUnselectable(new fabric.Textbox(description.value, {
+    left: padding,
+    top: cardHeight - padding - 120,
+    width: innerWidth,
+    fontSize: 14,
+    fontStyle: 'italic',
+    fill: '#000'
+  }))
+  canvas.add(descText)
+
+  const rarityLabel = makeUnselectable(new fabric.Text(rarity.value.toUpperCase(), {
+    left: padding + 40,
+    top: cardHeight - padding - 150,
+    fontSize: 18,
+    fontWeight: 'bold',
+    fill: '#333'
+  }))
+  const rarityGem = makeUnselectable(new fabric.Circle({
+    left: padding,
+    top: cardHeight - padding - 150,
+    radius: 16,
+    fill: '#ccc',
+    stroke: '#999',
+    strokeWidth: 2
+  }))
+  canvas.add(rarityGem, rarityLabel)
+
+  const njaLogo = makeUnselectable(new fabric.Rect({
+    left: padding,
+    top: cardHeight - padding - 32,
+    width: 24,
+    height: 24,
+    fill: '#2155CD'
+  }))
+  canvas.add(njaLogo)
+
+  const weaponBox = makeUnselectable(new fabric.Rect({
+    left: (cardWidth - 136) / 2,
+    top: cardHeight - padding - 32,
+    width: 136,
+    height: 24,
+    fill: '#eee',
+    stroke: '#ccc'
+  }))
+  const weaponText = makeUnselectable(new fabric.Text(weapon.value, {
+    left: (cardWidth - 136) / 2 + 10,
+    top: cardHeight - padding - 30,
+    fontSize: 14,
+    fill: '#000'
+  }))
+  canvas.add(weaponBox, weaponText)
+
+  if (uploadedLogo) {
+    uploadedLogo.set({
+      left: cardWidth - padding - 128,
+      top: cardHeight - padding - 150,
+      scaleX: 128 / uploadedLogo.width,
+      scaleY: 128 / uploadedLogo.height,
+      selectable: false,
+      evented: false
+    })
+    canvas.add(uploadedLogo)
+  } else {
+    const teamLogo = makeUnselectable(new fabric.Circle({
+      left: cardWidth - padding - 128,
+      top: cardHeight - padding - 150,
+      radius: 64,
+      fill: '#999',
+      stroke: '#333',
+      strokeWidth: 2
+    }))
+    canvas.add(teamLogo)
+  }
+
+  canvas.sendToBack(backgroundImage)
+  canvas.renderAll()
+}
+
+function handleImageUpload(e) {
+  const file = e.target.files[0]
+  if (!file) return
+  const reader = new FileReader()
+  reader.onload = () => {
+    fabric.Image.fromURL(reader.result, (img) => {
+      uploadedImage = img
+      updateCard()
+    })
+  }
+  reader.readAsDataURL(file)
+}
+
+function handleLogoUpload(e) {
+  const file = e.target.files[0]
+  if (!file) return
+  const reader = new FileReader()
+  reader.onload = () => {
+    fabric.Image.fromURL(reader.result, (img) => {
+      uploadedLogo = img
+      updateCard()
+    })
+  }
+  reader.readAsDataURL(file)
+}
+
+function exportCard() {
+  const dataURL = canvas.toDataURL({ format: 'png' })
+  const link = document.createElement('a')
+  link.href = dataURL
+  link.download = `${cardName.value || 'jugger-card'}.png`
+  link.click()
+}
+</script>
+
+<template>
+  <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div>
+      <h2 class="text-xl font-bold mb-4">Card Editor</h2>
+      <div class="mb-4">
+        <label>Name:</label>
+        <input v-model="cardName" @input="updateCard" class="border w-full p-2" />
+      </div>
+      <div class="mb-4">
+        <label>Description:</label>
+        <textarea v-model="description" @input="updateCard" class="border w-full p-2"></textarea>
+      </div>
+      <div class="mb-4">
+        <label>Rarity:</label>
+        <select v-model="rarity" @change="updateCard" class="border w-full p-2">
+          <option v-for="r in rarities" :key="r">{{ r }}</option>
+        </select>
+      </div>
+      <div class="mb-4">
+        <label>Weapon:</label>
+        <select v-model="weapon" @change="updateCard" class="border w-full p-2">
+          <option v-for="w in weapons" :key="w">{{ w }}</option>
+        </select>
+      </div>
+      <div class="mb-4">
+        <label>Card Color:</label>
+        <select v-model="cardColor" @change="updateCard" class="border w-full p-2">
+          <option v-for="color in cardColors" :key="color">{{ color }}</option>
+        </select>
+      </div>
+      <div class="mb-4">
+        <label>Main Image:</label>
+        <input type="file" @change="handleImageUpload" />
+      </div>
+      <div class="mb-4">
+        <label>Team Logo:</label>
+        <input type="file" @change="handleLogoUpload" />
+      </div>
+      <button @click="exportCard" class="bg-blue-500 text-white px-4 py-2 rounded">Export as PNG</button>
+    </div>
+    <div>
+      <h2 class="text-xl font-bold mb-4">Live Preview</h2>
+      <canvas ref="canvasRef"></canvas>
+    </div>
+  </div>
+</template>
+
+<style scoped>
+canvas {
+  border: 1px solid #ccc;
+}
+</style>
