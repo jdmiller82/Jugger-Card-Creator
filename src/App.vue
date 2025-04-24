@@ -1,5 +1,5 @@
 /*
-Version 1.3.2
+Version 1.3.5
 Main features included:
 - Vue 3 app with Tailwind CSS
 - Fabric.js canvas rendering with structured layout
@@ -35,10 +35,17 @@ const canvasRef = ref(null)
 let canvas
 let uploadedImage = null
 let uploadedLogo = null
+const teamLogos = [
+  'Baja Blast', 'Cardinal Sins', 'Deities', 'Drengr', 'Elementals',
+  'Feathered Serpents', 'Knights of the L\'Hopital', 'Luna Limax', 'Marauders',
+  'Nomad Goats', 'Oklahomies', 'Pegasus Jugger Club', 'Phantoms', 'Reapers',
+  'Rigor Tortoise', 'Spartans', 'Ursae Majoris'
+]
+const selectedTeamLogo = ref('')
 let backgroundImage = null
 
 const rarities = ['Common', 'Rare', 'Epic', 'Legendary']
-const weapons = ['Q-Tip', 'Staff', 'Longsword', 'Dual Short Swords', 'Sword and Shield', 'Chain']
+const weapons = ['Chain', 'Dual Short Swords', 'Longsword', 'Staff', 'Sword and Shield', 'Q-Tip', 'Qwik']
 const cardColors = ['Blue', 'Green', 'Yellow', 'Red']
 
 onMounted(async () => {
@@ -101,7 +108,7 @@ function drawCard() {
     })
     uploadedImage.clipPath = new fabric.Rect({
       width: cardWidth,
-      height: cardWidth - 12,
+      height: cardWidth,
       absolutePositioned: true
     })
     canvas.add(uploadedImage)
@@ -110,8 +117,8 @@ function drawCard() {
     const imageBox = makeUnselectable(new fabric.Rect({
       left: padding,
       top: padding - 1,
-      width: innerWidth,
-      height: cardWidth,
+      width: innerWidth + 5,
+      height: cardWidth + 12,
       fill: '#EEF2FF',
       absolutePositioned: true
     }))
@@ -168,7 +175,6 @@ function drawCard() {
   }))
   canvas.add(descText)
 
-
   // RARITY
   fabric.Image.fromURL(`/assets/rarity/${rarity.value.toLowerCase()}.png`, (rarityImg) => {
     rarityImg.set({
@@ -195,19 +201,7 @@ function drawCard() {
     canvas.add(njaImg)
   })
 
-  // WEAPONS
-  // fabric.Image.fromURL(`/assets/weapons/${weapon.value.toLowerCase().replaceAll(' ', '-')}.png`, (weaponImg) => {
-  //   weaponImg.set({
-  //     left: 62,
-  //     top: 674,
-  //     scaleX: 0.5,
-  //     scaleY: 0.5,
-  //     selectable: false,
-  //     evented: false
-  //   })
-  //   canvas.add(weaponImg)
-  // })
-
+  // Weapons
   fabric.Image.fromURL(`/assets/weapons/${weapon.value.toLowerCase().replaceAll(' ', '-')}-${cardColor.value.toLowerCase()}.png`, (weaponImg) => {
     weaponImg.set({
       left: 62,
@@ -232,7 +226,7 @@ function drawCard() {
     })
 
     uploadedLogo.clipPath = new fabric.Circle({
-      radius: 500,
+      radius: 256,
       originX: 'center',
       originY: 'center'
     })
@@ -284,6 +278,7 @@ function handleImageUpload(e) {
 }
 
 function handleLogoUpload(e) {
+  selectedTeamLogo.value = ''
   const file = e.target.files[0]
   if (!file) return
   const reader = new FileReader()
@@ -304,6 +299,16 @@ function getCardColor() {
     Red: '#DC2626'
   }
   return colorMap[cardColor.value] || '#2563EB'
+}
+
+function handleTeamLogoSelect() {
+  logoFile.value = null
+  const slug = selectedTeamLogo.value.toLowerCase().replaceAll(' ', '-');
+  const path = `/assets/team-logos/${slug}.png`
+  fabric.Image.fromURL(path, (img) => {
+    uploadedLogo = img
+    updateCard()
+  })
 }
 
 function exportCard() {
@@ -354,12 +359,21 @@ function exportCard() {
       </div>
       <div class="mb-4">
         <label>Main Image:</label>
+        <br>
         <input type="file" @change="handleImageUpload" />
       </div>
       <div class="mb-4">
         <label>Team Logo:</label>
+        <br>
+        <span class="text-sm text-gray-500">(must be square, max 512×512px)</span>
+        <br>
+        <select v-model="selectedTeamLogo" @change="handleTeamLogoSelect" class="border w-full p-2 mb-2">
+          <option value="">-- Select Team Logo --</option>
+          <option v-for="team in teamLogos" :key="team">{{ team }}</option>
+        </select>
         <input type="file" @change="handleLogoUpload" />
       </div>
+      
       <button @click="exportCard" class="bg-blue-500 text-white px-4 py-2 rounded">Export as PNG</button>
     </div>
     <div>
@@ -367,7 +381,7 @@ function exportCard() {
       <canvas ref="canvasRef"></canvas>
     </div>
   </div>
-  <div><p>Version 1.3.2</p></div>
+  <div><p>Version 1.3.5</p></div>
   <br>
   <hr>
   <br>
